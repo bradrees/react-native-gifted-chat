@@ -22,7 +22,14 @@ import Time from './Time'
 import Color from './Color'
 
 import { isSameUser, isSameDay } from './utils'
-import { User, IMessage, LeftRightStyle, Reply, Omit } from './types'
+import {
+  User,
+  IMessage,
+  LeftRightStyle,
+  Reply,
+  Omit,
+  MessageVideoProps,
+} from './types'
 
 const styles = {
   left: StyleSheet.create({
@@ -107,7 +114,7 @@ export type RenderMessageVideoProps<TMessage extends IMessage> = Omit<
   BubbleProps<TMessage>,
   'containerStyle' | 'wrapperStyle'
 > &
-  MessageVideo['props']
+  MessageVideoProps<TMessage>
 
 export type RenderMessageTextProps<TMessage extends IMessage> = Omit<
   BubbleProps<TMessage>,
@@ -120,11 +127,12 @@ export interface BubbleProps<TMessage extends IMessage> {
   touchableProps?: object
   renderUsernameOnMessage?: boolean
   isCustomViewBottom?: boolean
+  inverted?: boolean
   position: 'left' | 'right'
   currentMessage?: TMessage
   nextMessage?: TMessage
   previousMessage?: TMessage
-  optionTitles?: string
+  optionTitles?: string[]
   containerStyle?: LeftRightStyle<ViewStyle>
   wrapperStyle?: LeftRightStyle<ViewStyle>
   textStyle?: LeftRightStyle<TextStyle>
@@ -145,9 +153,6 @@ export interface BubbleProps<TMessage extends IMessage> {
   renderUsername?(): React.ReactNode
   renderQuickReplySend?(): React.ReactNode
   renderQuickReplies?(quickReplies: QuickReplies['props']): React.ReactNode
-  // TODO: remove in next major release
-  isSameDay?(currentMessage: TMessage, nextMessage: TMessage): boolean
-  isSameUser?(currentMessage: TMessage, nextMessage: TMessage): boolean
 }
 
 export default class Bubble<
@@ -260,7 +265,7 @@ export default class Bubble<
     }
   }
 
-  handleBubbleToNext() {
+  styledBubbleToNext() {
     const {
       currentMessage,
       nextMessage,
@@ -282,7 +287,7 @@ export default class Bubble<
     return null
   }
 
-  handleBubbleToPrevious() {
+  styledBubbleToPrevious() {
     const {
       currentMessage,
       previousMessage,
@@ -334,7 +339,12 @@ export default class Bubble<
 
   renderMessageText() {
     if (this.props.currentMessage && this.props.currentMessage.text) {
-      const { containerStyle, wrapperStyle, ...messageTextProps } = this.props
+      const {
+        containerStyle,
+        wrapperStyle,
+        optionTitles,
+        ...messageTextProps
+      } = this.props
       if (this.props.renderMessageText) {
         return this.props.renderMessageText(messageTextProps)
       }
@@ -370,7 +380,12 @@ export default class Bubble<
     if (renderTicks && currentMessage) {
       return renderTicks(currentMessage)
     }
-    if (currentMessage && user && currentMessage.user._id !== user._id) {
+    if (
+      currentMessage &&
+      user &&
+      currentMessage.user &&
+      currentMessage.user._id !== user._id
+    ) {
       return null
     }
     if (
@@ -439,20 +454,21 @@ export default class Bubble<
   }
 
   renderBubbleContent() {
-    return this.props.isCustomViewBottom ?
-    <View>
-    {this.renderMessageImage()}
-    {this.renderMessageVideo()}
-    {this.renderMessageText()}
-    {this.renderCustomView()}
-    </View>
-    :
-    <View>
-    {this.renderCustomView()}
-    {this.renderMessageImage()}
-    {this.renderMessageVideo()}
-    {this.renderMessageText()}
-    </View>
+    return this.props.isCustomViewBottom ? (
+      <View>
+        {this.renderMessageImage()}
+        {this.renderMessageVideo()}
+        {this.renderMessageText()}
+        {this.renderCustomView()}
+      </View>
+    ) : (
+      <View>
+        {this.renderCustomView()}
+        {this.renderMessageImage()}
+        {this.renderMessageVideo()}
+        {this.renderMessageText()}
+      </View>
+    )
   }
 
   render() {
@@ -473,8 +489,8 @@ export default class Bubble<
           style={[
             styles[position].wrapper,
             wrapperStyle && wrapperStyle[position],
-            this.handleBubbleToNext(),
-            this.handleBubbleToPrevious(),
+            this.styledBubbleToNext(),
+            this.styledBubbleToPrevious(),
           ]}
         >
           <TouchableWithoutFeedback
